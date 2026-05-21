@@ -14,9 +14,6 @@
         button:active { background-color: #339af0; transform: scale(0.98); }
         .notice { margin-top: 20px; color: #888; font-size: 15px; text-align: center; }
     </style>
-    
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -26,69 +23,67 @@
         <input type="text" id="word-input" placeholder="단어를 쓰고 [보내기] 클릭!" autofocus onkeyup="if(window.event.keyCode==13){sendWord()}">
         <button onclick="sendWord()">☁️ 구름으로 보내기</button>
     </div>
-    
     <p class="notice">칠판(TV) 화면을 다 함께 보세요!</p>
 
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyDBTjVpkPHRhbIUEbQ-55ihWWpISwYXGoc",
-        authDomain: "class-wordcloud-fa480.firebaseapp.com",
-        databaseURL: "https://class-wordcloud-fa480-default-rtdb.firebaseio.com",
-        projectId: "class-wordcloud-fa480",
-        storageBucket: "class-wordcloud-fa480.firebasestorage.app",
-        messagingSenderId: "832736185461",
-        appId: "1:832736185461:web:7a5c0a82d91bc1fd103c3c"
-    };
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // 파이어베이스 초기화
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    const colors = ['#ff4a4a', '#e600bc', '#673ab7', '#3f51b5', '#00bcd4', '#4caf50', '#ff9800', '#ff5722', '#109618'];
+        // 새로 파신 프로젝트(wordcloud-56453)용 범용 연동 설정입니다!
+        const firebaseConfig = {
+            authDomain: "wordcloud-56453.firebaseapp.com",
+            databaseURL: "https://wordcloud-56453-default-rtdb.firebaseio.com",
+            projectId: "wordcloud-56453",
+            storageBucket: "wordcloud-56453.firebasestorage.app"
+        };
 
-    function sendWord() {
-        const input = document.getElementById('word-input');
-        const text = input.value.trim();
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const colors = ['#ff4a4a', '#e600bc', '#673ab7', '#3f51b5', '#00bcd4', '#4caf50', '#ff9800', '#ff5722', '#109618'];
 
-        if (text === "") return;
-        if (text.length > 8) {
-            alert("단어를 8자 이내로 짧게 적어주세요!");
-            input.value = '';
-            return;
-        }
+        window.sendWord = function() {
+            const input = document.getElementById('word-input');
+            const text = input.value.trim();
 
-        // 공백이나 특수문자가 들어가도 오류 안 나게 안전 처리
-        const safeText = encodeURIComponent(text).replace(/\./g, '%2E');
-        const wordRef = database.ref('words/' + safeText);
-        
-        wordRef.once('value').then((snapshot) => {
-            if (snapshot.exists()) {
-                wordRef.update({ count: snapshot.val().count + 1 }).then(() => {
-                    success();
-                });
-            } else {
-                const randomColor = colors[Math.floor(Math.random() * colors.length)];
-                const x = Math.floor(Math.random() * (950 - 260)) + 130; 
-                const y = Math.floor(Math.random() * (600 - 260)) + 130; 
-
-                wordRef.set({
-                    text: text,
-                    count: 1,
-                    color: randomColor,
-                    x: x,
-                    y: y
-                }).then(() => {
-                    success();
-                });
+            if (text === "") return;
+            if (text.length > 8) {
+                alert("단어를 8자 이내로 짧게 적어주세요!");
+                input.value = '';
+                return;
             }
-        }).catch((err) => {
-            alert("오류 발생: " + err.message + "\n파이어베이스 보안 규칙을 다시 확인해보세요!");
-        });
 
-        function success() {
-            input.value = '';
-            alert("성공적으로 보냈어요! 👍");
+            const safeText = encodeURIComponent(text).replace(/\./g, '%2E');
+            const wordRef = ref(database, 'words/' + safeText);
+            
+            get(wordRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    update(wordRef, { count: snapshot.val().count + 1 })
+                    .then(() => { success(); })
+                    .catch((err) => { alert("오류: " + err.message); });
+                } else {
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    const x = Math.floor(Math.random() * (950 - 260)) + 130; 
+                    const y = Math.floor(Math.random() * (600 - 260)) + 130; 
+
+                    set(wordRef, {
+                        text: text,
+                        count: 1,
+                        color: randomColor,
+                        x: x,
+                        y: y
+                    })
+                    .then(() => { success(); })
+                    .catch((err) => { alert("오류: " + err.message); });
+                }
+            }).catch((err) => {
+                alert("서버 연결 실패! 파이어베이스 [규칙] 탭에서 true로 게시했는지 꼭 확인해주세요!");
+            });
+
+            function success() {
+                input.value = '';
+                alert("성공적으로 보냈어요! 👍");
+            }
         }
-    }
-</script>
+    </script>
 </body>
 </html>
